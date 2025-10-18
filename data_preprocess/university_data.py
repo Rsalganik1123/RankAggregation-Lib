@@ -19,7 +19,7 @@ partial_df = pd.concat(partial_rankings)
 unique_university_names = partial_df.university.unique().tolist()
 university_to_id_hashmap = dict(zip(unique_university_names, list(range(len(unique_university_names))))) 
 partial_df['university_id'] = partial_df['university'].apply(lambda x: university_to_id_hashmap[x])
-
+  
 
 #Taken from MC1 implementation
 # Define the top-level input for MarKovChain as a CSV file with 4 columns: Query | Voter name | Item Code | Item Rank
