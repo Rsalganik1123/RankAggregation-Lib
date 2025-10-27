@@ -11,6 +11,7 @@ import pandas as pd
 import csv
 import time
 from functools import cmp_to_key
+import ipdb
 
 
 def PartialToFull(input_list):
@@ -125,7 +126,7 @@ def eliminate_bottom(vot, m, rule, tiebreaking):
     not_deleted = list(range(m))
     order = [0] * m
     points = rule(vot, m)
-    print(points)
+    # print(points)
     for i in range(m - 1):
         min_relevant = min([points[i] for i in not_deleted])
         cand_to_be_del = [i for i in not_deleted if points[i] == min_relevant]
@@ -166,14 +167,14 @@ def score_ordering(m, points, tiebreaking):
     global tie
     tie = 0
     global tie_breaking_order
-    print(points)
+    # print(points)
     tie_breaking_order = tiebreaking
     inversed_points = [-x for x in points]
     to_be_sorted = list(zip(inversed_points, list(range(m))))
     return [x for _, x in sorted(to_be_sorted, key=cmp_to_key(compare))], tie
 
 
-def Borda_Score(input, output, is_partial_list=True):
+def Borda_Score_old(input, output, is_partial_list=True):
     df = pd.read_csv(input, header=None)
     df.columns = ['Query', 'Voter Name', 'Item Code', 'Item Rank']
 
@@ -203,10 +204,51 @@ def Borda_Score(input, output, is_partial_list=True):
 
     end_time = time.perf_counter()
     elapsed_time = end_time - start_time
-    print(f"Program execution time: {elapsed_time} seconds")
+    # print(f"Program execution time: {elapsed_time} seconds")
 
     # Write the results to the output CSV file
     with open(output, mode='w', newline='') as file:
         writer = csv.writer(file)
         for row in result:
             writer.writerow(row)
+
+
+def borda_score(partial_list_df, output_path=None, is_partial_list=True):
+
+    # partial_list_df.columns = ['Query', 'Voter Name', 'Item Code', 'Item Rank']
+
+    # Get unique Query values
+    unique_queries = partial_list_df['Query'].unique()
+    start_time = time.perf_counter()
+    # Create an empty list to store results
+
+    result = []
+
+    for query in unique_queries:
+        query_data = partial_list_df[partial_list_df['Query'] == query]
+        int_to_item_map, int_to_voter_map, item_to_int_map, voter_to_int_map, input_lists = Map(
+            query_data)
+
+        if (is_partial_list == True):
+            full_input_lists, list_numofitems = PartialToFull(input_lists)
+
+        # Call function to get ranking information
+        rank, tie = score_ordering(full_input_lists.shape[1], borda(
+            full_input_lists), list(np.random.permutation(full_input_lists.shape[1])))
+
+        # Add results to the result list
+        for i in range(len(rank)):
+            item_code = int_to_item_map[rank[i]]
+            item_rank = i+1
+            new_row = [int(query), int(item_code), item_rank]
+            result.append(new_row)
+
+    end_time = time.perf_counter()
+    elapsed_time = end_time - start_time
+    # print(f"Program execution time: {elapsed_time} seconds")
+
+    agg_df = pd.DataFrame(result, columns=['idx', 'Item Code', 'Item Rank'])
+    # Write the results to the output CSV file
+    if output_path:
+        agg_df.to_csv(output_path+'aggregate_list.csv')
+    return agg_df
